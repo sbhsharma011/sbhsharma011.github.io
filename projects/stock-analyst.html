@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Stock Analyst — Saurabh Sharma</title>
+<title>StockAnalystAgent — Saurabh Sharma</title>
+<meta name="description" content="A two-agent AI pipeline for real-time stock analysis and trading recommendations, built on CrewAI.">
 <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
@@ -26,10 +27,71 @@
     <aside class="rail"><span class="rail-label">Project</span></aside>
     <div class="content">
     <article>
-      <h1>Stock Analyst</h1>
-      <div class="placeholder-notice">
-        Coming soon.
+      <p class="eyebrow">Multi-Agent AI · Open Source</p>
+      <h1>StockAnalystAgent</h1>
+      <p class="subhead">Multi-agent AI system for real-time stock analysis and trading recommendations</p>
+
+      <div class="cta-row" style="margin-bottom:28px;">
+        <a href="https://github.com/sbhsharma011/StockAnalystAgent" class="btn btn-primary" target="_blank" rel="noopener">View on GitHub ↗</a>
       </div>
+
+      <h2>The Problem</h2>
+      <p>
+        Retail investors are flooded with market data but starved for synthesis. A single
+        ticker check involves cross-referencing live price, daily volume, percentage
+        change, and momentum — then translating those signals into an actual decision.
+        Most free tools stop at showing the numbers; they don't reason about what the
+        numbers mean or commit to a recommendation. That gap forces investors to either do
+        the analysis manually or rely on paid terminals built for professionals, not
+        everyday users.
+      </p>
+
+      <h2>The Solution</h2>
+      <p>
+        StockAnalystAgent closes that gap with a two-agent AI pipeline: one agent pulls and
+        interprets live market data, a second agent evaluates that analysis and produces a
+        clear Buy, Sell, or Hold recommendation with reasoning — delivered through a
+        conversational chat interface where a user just types a ticker symbol.
+      </p>
+
+      <h2>How It Works</h2>
+      <p>
+        The system is built on CrewAI, an orchestration framework for coordinating
+        multiple specialized LLM agents toward a shared goal:
+      </p>
+      <ol>
+        <li><strong>Stock Analyst Agent</strong> — queries live market data (current price, daily change, volume) via the Yahoo Finance API and produces a structured summary of the stock's current performance and any notable trends.</li>
+        <li><strong>Stock Trader Agent</strong> — takes that summary and reasons over it like a trading strategist: assessing momentum and risk, then issuing a confident Buy/Sell/Hold call with supporting justification and, where relevant, a suggested holding window.</li>
+      </ol>
+      <p>
+        The two agents run sequentially in a Crew, each with a distinct role, goal, and
+        backstory that shapes how it reasons — the analyst stays descriptive and
+        data-driven, the trader is the one that commits to a decision. This separation
+        keeps each agent's prompt focused and makes the reasoning at each step auditable,
+        rather than asking one model to do data lookup and financial judgment in a single
+        pass.
+      </p>
+
+      <h2>Tech Stack</h2>
+      <ul>
+        <li><strong>CrewAI</strong> — multi-agent orchestration</li>
+        <li><strong>Groq (LLaMA 3.3 70B)</strong> — low-latency LLM inference for both agents</li>
+        <li><strong>yfinance</strong> — live market data</li>
+        <li><strong>Streamlit</strong> — chat-based front end</li>
+      </ul>
+
+      <h2>Key Design Decisions</h2>
+      <ul>
+        <li><strong>Separation of concerns between agents</strong> — splitting "what happened" from "what to do about it" produces more consistent, well-justified recommendations than a single monolithic prompt, and makes it straightforward to swap or improve one agent's behavior without touching the other.</li>
+        <li><strong>Groq for inference</strong> — chosen for response speed, since the app is conversational and users are waiting on a live chat reply, not a batch report.</li>
+        <li><strong>Environment-based configuration</strong> — API keys are never hardcoded; the app loads credentials from environment variables so it's safe to run locally or deploy without exposing secrets.</li>
+      </ul>
+
+      <h2>Disclaimer</h2>
+      <div class="callout">
+        <p style="margin-bottom:0">Built for educational purposes to demonstrate multi-agent AI system design — not intended as financial advice.</p>
+      </div>
+
     </article>
     </div>
   </div>
