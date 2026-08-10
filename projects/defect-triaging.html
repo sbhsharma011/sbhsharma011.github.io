@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Building an AI Domain Expert When You Don't Own the Domain Yet — Saurabh Sharma</title>
+<meta name="description" content="Structured Knowledge Base first. Personas that think like senior engineers second. Triage only when both are real — live in production, cutting RCA time from 2-4 hours to under 35 seconds.">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="../index.html" class="logo">Saurabh Sharma</a>
+    <nav class="site-nav">
+      <a href="../index.html">Home</a>
+      <a href="../about.html">About</a>
+      <a href="index.html" class="active">Projects</a>
+      <a href="../framework.html">Framework</a>
+      <a href="../contact.html">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="page-grid">
+    <aside class="rail">
+      <span class="rail-label">Project</span>
+      <nav class="toc" aria-label="Sections">
+        <a href="#lesson">The KB is the product</a>
+        <a href="#new-source">A new KB source</a>
+        <a href="#personas">Abstracting personas</a>
+        <a href="#triage-analyst">Triage Analyst</a>
+        <a href="#humans">Humans own the truth</a>
+        <a href="#worked-harder">What worked</a>
+        <a href="#playbook">Implementation playbook</a>
+        <a href="#closing">Closing</a>
+      </nav>
+    </aside>
+    <div class="content">
+    <article>
+      <p class="eyebrow">Judgment &amp; Architecture</p>
+      <h1>Building an AI Domain Expert When You Don't Own the Domain Yet</h1>
+      <p class="subhead">Structured Knowledge Base first. Personas that think like senior engineers second. Triage only when both are real.</p>
+
+      <div class="metrics">
+        <div class="metric">
+          <div class="value">2–4 hrs → &lt;35s</div>
+          <div class="label">Manual RCA time vs. pipeline RCA time</div>
+        </div>
+        <div class="metric">
+          <div class="value">Live</div>
+          <div class="label">In production today</div>
+        </div>
+      </div>
+
+      <p>
+        I joined a telecom charging platform I didn't understand, and the fastest way to
+        learn it turned out to be building an AI that had to explain it back to me.
+      </p>
+      <p>
+        That AI is now running in production: a structured Knowledge Base, a Domain Expert
+        persona for Q&amp;A, and an evidence-based Triage Analyst for live defects — cutting
+        root cause analysis from 2–4 hours to under 35 seconds.
+      </p>
+      <p>
+        The interesting part isn't that it worked. It's what had to be true first — and how
+        you build a knowledge base for a domain you don't own yet. The pattern transfers
+        better than the telecom specifics.
+      </p>
+
+      <div class="callout">
+        <p><strong>The KB is the product.</strong> Personas, prompts, and tool integrations are just the interface — every later capability stands on whether the catalog can answer where you are in the domain.</p>
+        <p style="margin-bottom:0"><strong>Post-evidence repo routing.</strong> No locking onto a component before the ticket and evidence say which one.</p>
+      </div>
+
+      <h2 id="lesson">The lesson up front: the KB is the product</h2>
+      <p>
+        Personas, prompts, and tool integrations are the interface. The Knowledge Base is
+        the foundation.
+      </p>
+      <p>
+        Skip it, and a "domain expert agent" is just fluent guesswork. Skip it in triage,
+        and you get a confident monologue instead of an investigation. Every later
+        capability — Expert Q&amp;A, flow mapping, confidence caps, ingestion — stands on
+        whether the catalog can answer four questions:
+      </p>
+      <ul>
+        <li>What family of behavior is this?</li>
+        <li>Which flow am I in?</li>
+        <li>Who owns the contracts (errors, interfaces)?</li>
+        <li>What do we know vs. guess?</li>
+      </ul>
+      <p>Rebuild this tomorrow, and I'd still spend the first stretch on KB design, not chat UX.</p>
+
+      <h2 id="new-source">When the KB source is completely new</h2>
+      <p>
+        That's the hard case: you don't know yet which docs matter, what's authoritative,
+        or how experts mentally carve up the domain.
+      </p>
+
+      <h3>What "new source" looked like</h3>
+      <p>
+        The material: a large architecture and design corpus — flow references, interface
+        docs, diagrams — plus code and ticket history. I didn't have a mental map. Dumping
+        all of it into embeddings would have just built a search engine over confusion.
+      </p>
+
+      <h3>How we ran discovery</h3>
+      <ol>
+        <li><strong>Inventory before interpretation.</strong> We didn't summarize random pages first. We ran discovery over the source tree, mapping flow references into a full inventory. Not "understand everything" — just: what flow references exist, which look like core lifecycle vs. specialized families, where do diagrams and text disagree, what belongs in a first useful catalog. Discovery produces candidates, not a finished KB.</li>
+        <li><strong>Draw a hard scope line early.</strong> From discovery we indexed core session and event coverage and left specialized, lower-frequency flow families out — even though they showed up in the tree. An unbounded corpus never becomes trustworthy. Completeness of discovery isn't completeness of indexing. Write out-of-scope in public, so the agent doesn't invent coverage.</li>
+        <li><strong>Choose one pilot and make it deep.</strong> We picked one pilot flow and went deep: message sequence, systems sequence, error catalog, interfaces, runtime-evidence pointers. Variants reuse the pilot instead of cloning catalogs. On a new domain, depth on one golden path beats shallow coverage of twenty — the pilot becomes the template for everything else.</li>
+        <li><strong>Group by ingress, not by document title.</strong> Documents aren't the unit of reasoning — ingress signals are: what entered the system, on which protocol, for which purpose. That became the navigation spine. Structure the KB the way an engineer debugs: what entered the system, not which document mentioned the error.</li>
+        <li><strong>Validate with scenarios, not vibes.</strong> Every expansion phase ended with scenario checks: can the agent distinguish protocols, pick the right flow, name the right owner? We kept a validation score and an accepted-gaps list so thin areas stayed visible. A KB without tests ages into fiction — scenario Q→A is the unit test of domain knowledge.</li>
+        <li><strong>Separate catalog truth from runtime fetch.</strong> The KB holds structured facts and pointers. Live code and design docs get fetched when the catalog runs out, so the KB never becomes a stale code dump. Index what's stable; point to what moves.</li>
+      </ol>
+
+      <h3>Building the KB in phases (what we'd do again)</h3>
+      <table>
+        <thead>
+          <tr><th>Phase</th><th>Goal</th><th>Lesson</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Discover &amp; scope</td><td>Inventory candidates; write in/out of scope</td><td>Don't index everything you found</td></tr>
+          <tr><td>Pilot depth</td><td>One rich flow + owned contracts</td><td>Template before breadth</td></tr>
+          <tr><td>Family expansion</td><td>Add variants via shared artifacts</td><td>Reuse beats copy-paste</td></tr>
+          <tr><td>Protocol separation</td><td>Keep voice/data/event boundaries honest</td><td>Wrong routing is the fastest failure</td></tr>
+          <tr><td>Validate</td><td>Scenario pass/fail + accepted gaps</td><td>Public uncertainty &gt; silent overclaim</td></tr>
+          <tr><td>Then personas</td><td>Expert Q&amp;A on a catalog that survives real questions</td><td>Agents amplify structure — or noise</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Playbook if your source is new</h3>
+      <ul>
+        <li>Dump the corpus into an inventory, not into answers</li>
+        <li>Pick the ~20% of flows that cover ~80% of day-to-day questions</li>
+        <li>Build one pilot end-to-end</li>
+        <li>Write 10 scenario questions; iterate until the KB answers them with paths</li>
+        <li>Only then add Expert Q&amp;A</li>
+        <li>Only then add investigation that uses the KB + live evidence</li>
+        <li>Instrument feedback from day one of any pilot</li>
+      </ul>
+
+      <h2 id="personas">Abstracting AI personas: teaching an agent to think like a senior engineer</h2>
+      <p>
+        Once the KB could answer "where am I in the domain?", the next problem was
+        different: how should an agent think when something is broken?
+      </p>
+      <p>
+        Most triage bots collapse into one move: read the ticket, pick a familiar component,
+        write a root cause. That's not how strong engineers work — so we abstracted
+        senior-engineer troubleshooting into personas: role identity, reasoning rules, tool
+        gates, an ordered workflow. Not a single clever prompt.
+      </p>
+
+      <h3>What a persona actually is</h3>
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>What it encodes</th><th>Why it matters</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Identity</td><td>Domain expert / senior triage analyst</td><td>Sets the job: build a mental model, don't win the argument</td></tr>
+          <tr><td>Activation</td><td>Clear trigger phrases</td><td>Same entry point for every engineer</td></tr>
+          <tr><td>Skill + workflow</td><td>Ordered mandatory steps</td><td>Prevents skipping hard work (attachments, prior-RCA checks)</td></tr>
+          <tr><td>Tool contracts</td><td>Block vs. warn on system availability</td><td>Agent can't invent a ticket when a tool integration is down</td></tr>
+          <tr><td>Output contract</td><td>Hypotheses, sources, confidence, open gaps</td><td>Makes analysis auditable</td></tr>
+          <tr><td>Anti-patterns</td><td>Explicit "do not…" list</td><td>Codifies mistakes juniors — and models — make</td></tr>
+        </tbody>
+      </table>
+      <p>If your "agent" is only a system prompt, you haven't abstracted the role yet. Abstract the decision discipline.</p>
+
+      <h3>Two personas, two jobs, one foundation</h3>
+      <table>
+        <thead>
+          <tr><th></th><th>Domain Expert</th><th>Triage Analyst</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Job</th><td>Teach / explain the domain</td><td>Investigate a live defect</td></tr>
+          <tr><th scope="row">Primary fuel</th><td>Structured KB (+ code/docs when KB ends)</td><td>Live ticket + attachments + KB + code</td></tr>
+          <tr><th scope="row">Success looks like</th><td>Correct flow/protocol explanation with paths</td><td>Auditable mental model + calibrated RCA or clear blockers</td></tr>
+          <tr><th scope="row">Failure mode if KB is weak</th><td>Fluent wrong answers</td><td>Confident wrong component</td></tr>
+        </tbody>
+      </table>
+      <p>
+        Same foundation. Different cognitive job. Keeping them separate stops the Expert
+        from "triaging" every question and the Triager from lecturing architecture when the
+        ticket needs log analysis.
+      </p>
+
+      <h3>How I used the Expert while learning</h3>
+      <p>
+        Instead of interrupting seniors constantly, I asked the Expert: how core flows
+        worked, why interfaces existed, what triggered downstream processes, how session
+        lifecycle and billing events connected end to end. It doesn't invent a second
+        truth — it reads the KB, then escalates to code or docs when needed.
+      </p>
+
+      <h2 id="triage-analyst">Triage Analyst: the senior-engineer operating system</h2>
+      <div class="callout">
+        <p style="margin-bottom:0"><em>Your job is not to confirm a hypothesis quickly. Your job is to build an accurate mental model of the defect from primary sources.</em></p>
+      </div>
+      <p>That fights the default model habit: pattern-match early and defend it.</p>
+
+      <h3>Seven principles we encoded</h3>
+      <ol>
+        <li><strong>Evidence before conclusion</strong> — No RCA without a primary source. Gaps stay pending, not filled with confidence.</li>
+        <li><strong>Start wide, narrow with facts</strong> — Don't pre-select a favorite component; every narrowing step cites what forced it.</li>
+        <li><strong>Hypothesis ledger, not fixed RCA</strong> — Theories stay open / confirmed / rejected, even against a senior's earlier comment.</li>
+        <li><strong>Verify, don't trust</strong> — Prior RCAs and "already fixed" comments are claims, not facts. Latest retest and current code win.</li>
+        <li><strong>Separate layers</strong> — Logic ≠ persistence ≠ query/filter ≠ API mapping ≠ downstream display.</li>
+        <li><strong>Confidence is earned</strong> — Per finding, from evidence quality. Low confidence is allowed; false certainty isn't.</li>
+        <li><strong>Multi-symptom by default</strong> — Bundled symptoms are independent until proven shared.</li>
+      </ol>
+
+      <h3>The investigation loop</h3>
+      <ol>
+        <li>Live ticket (full comments + attachments)</li>
+        <li>Symptom &amp; impact</li>
+        <li>Verify prior investigation (accept / reject / partial)</li>
+        <li>KB flow map (where this sits in the domain)</li>
+        <li>Candidate routing only after evidence</li>
+        <li>Code / design / bugfix branch when needed</li>
+        <li>Update hypothesis ledger</li>
+        <li>RCA only when supported — or "blocked pending evidence"</li>
+        <li>Confidence + checkpoints + next actions</li>
+        <li>Audit saved</li>
+        <li>Human feedback</li>
+        <li>Improve the workflow</li>
+      </ol>
+      <p>Two choices matter more than prompt length:</p>
+      <ul>
+        <li><strong>Post-evidence repo routing</strong> — No locking onto a component before reading the ticket.</li>
+        <li><strong>KB as the map, not the verdict</strong> — Place the defect in a flow family before diving into the wrong codebase.</li>
+      </ul>
+
+      <h3>What "like a senior engineer" means in the output</h3>
+      <p>A junior dump says: <em>Root cause is X. Fix file Y.</em></p>
+      <p>
+        A senior-style report makes reasoning inspectable: answer with confidence,
+        hypothesis ledger, tagged sources (ticket / code / KB / attachment / inference),
+        validation still required, and checkpoints that passed or remain open.
+      </p>
+      <p>That turns the agent from an oracle into a pair investigator — something a human can disagree with productively.</p>
+
+      <h2 id="humans">Humans still own the truth</h2>
+      <p>The loop in production:</p>
+      <ol>
+        <li>Run the defect through the Triage Analyst first</li>
+        <li>Review the analysis</li>
+        <li>Investigate with real experience</li>
+        <li>After conclusion, leave feedback: what helped, what was wrong, what was missed</li>
+      </ol>
+      <p>
+        Feedback is stored raw. Action items feed prompt, KB, and workflow. Accuracy keeps
+        rising because experienced engineers keep using it — not because anyone trusted the
+        first good-looking report.
+      </p>
+      <p>Build the agent to be reviewed, then instrument the review.</p>
+
+      <h2 id="worked-harder">What worked — and what was harder</h2>
+      <h3>Worked</h3>
+      <ul>
+        <li>Treating the KB as the product and personas as consumers of it</li>
+        <li>Discovery → scope → pilot → validate before breadth</li>
+        <li>Pilot/variant reuse so contracts don't drift</li>
+        <li>Explicit confidence caps and accepted gaps</li>
+        <li>Hypothesis ledger + anti-patterns in the triage persona</li>
+        <li>Audit + feedback so wrong answers become backlog, not folklore</li>
+      </ul>
+      <h3>Harder than expected</h3>
+      <ul>
+        <li>Diagram titles vs. protocol reality (document the conflict; don't silently pick)</li>
+        <li>Thin source references on some variants — better to mark medium confidence than overclaim</li>
+        <li>Resisting the urge to index everything discovery found</li>
+        <li>Stopping the agent from "winning" with an early RCA</li>
+      </ul>
+      <h3>Ongoing</h3>
+      <ul>
+        <li>Expanding scenario coverage as new defect patterns surface in production</li>
+        <li>Aligning with other triage-agent efforts toward a shared pipeline</li>
+      </ul>
+
+      <h2 id="playbook">If you implement something similar</h2>
+      <table>
+        <thead>
+          <tr><th>Do</th><th>Avoid</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Inventory the corpus before answering from it</td><td>RAG over the entire dump on day one</td></tr>
+          <tr><td>Write in-scope / out-of-scope in public</td><td>"We'll add everything eventually" with no boundary</td></tr>
+          <tr><td>One deep pilot + reuse rules</td><td>Fifty shallow summaries with no ownership</td></tr>
+          <tr><td>Ingress/navigation tree</td><td>Keyword search as the only structure</td></tr>
+          <tr><td>Scenario validation each phase</td><td>Expanding because docs exist, not because questions need them</td></tr>
+          <tr><td>Expert persona only after the KB survives real questions</td><td>Building the chatbot first</td></tr>
+          <tr><td>Investigator persona with ordered workflow + anti-patterns</td><td>One mega-prompt that "does triage"</td></tr>
+          <tr><td>Block/warn tool gates and degraded mode</td><td>Hallucinating tickets when integrations fail</td></tr>
+          <tr><td>Hypothesis ledger + earned confidence</td><td>Auto-closing every ticket with a single RCA</td></tr>
+          <tr><td>Human feedback after real use</td><td>Shipping without a correction loop</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="closing">Closing</h2>
+      <p>
+        We didn't try to make the agent "smart." We tried to make the domain navigable and
+        the investigator disciplined.
+      </p>
+      <p>
+        The Knowledge Base tells the agent where it is. The persona tells it how to think
+        once it's there. Neither alone is enough. Together — with humans reviewing and
+        feeding back — they approximate a senior path well enough to accelerate learning and
+        triage in production, and stay structured enough to be corrected in public.
+      </p>
+      <p>
+        Start with discovery, scope, and a structured KB that can be wrong out loud. Then
+        teach the agent the habits of a senior engineer — not the performance of one.
+      </p>
+
+    </article>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p>&copy; 2026 Saurabh Sharma · <a href="mailto:sbhsharma011@gmail.com">sbhsharma011@gmail.com</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
