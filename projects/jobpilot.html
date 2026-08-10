@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JobPilot — Saurabh Sharma</title>
+<meta name="description" content="A Chrome extension that fills out job application forms across any ATS platform, scores your profile against a job description, and stops duplicate applications.">
+<link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="../index.html" class="logo">Saurabh Sharma</a>
+    <nav class="site-nav">
+      <a href="../index.html">Home</a>
+      <a href="../about.html">About</a>
+      <a href="index.html" class="active">Projects</a>
+      <a href="../framework.html">Framework</a>
+      <a href="../contact.html">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="page-grid">
+    <aside class="rail">
+      <span class="rail-label">Project</span>
+      <nav class="toc" aria-label="Sections">
+        <a href="#problem">The problem</a>
+        <a href="#what-it-does">What it does</a>
+        <a href="#engineering">Engineering highlights</a>
+        <a href="#privacy">Privacy by design</a>
+        <a href="#tech-stack">Tech stack</a>
+      </nav>
+    </aside>
+    <div class="content">
+    <article>
+      <p class="eyebrow">Chrome Extension · Open Source</p>
+      <h1>JobPilot — AI-Assisted Job Application Autofill</h1>
+      <p class="subhead">A Chrome extension that fills out job application forms across any ATS platform, matches your profile against a job description before you apply, and stops you from accidentally applying to the same role twice.</p>
+
+      <div class="cta-row" style="margin-bottom:16px;">
+        <a href="https://github.com/sbhsharma011/JobPilot" class="btn btn-primary" target="_blank" rel="noopener">View on GitHub ↗</a>
+      </div>
+      <div class="tags" style="margin-bottom:28px;">
+        <span class="tag">Manifest V3</span>
+        <span class="tag">Vanilla JavaScript</span>
+        <span class="tag">Anthropic Claude API</span>
+      </div>
+
+      <h2 id="problem">The problem</h2>
+      <p>
+        Job searching means re-entering the same information — name, contact details, work
+        history, EEO answers, "why do you want to work here" — into dozens of different
+        application forms, each built on a different ATS (Greenhouse, Lever, Workday,
+        iCIMS, or a fully custom portal). Every platform structures its form differently:
+        some are plain HTML, some are React-controlled inputs, some render dropdowns as
+        portaled JS widgets with no relationship to a native <code>&lt;select&gt;</code>.
+        Autofill tools that work on one break on the next.
+      </p>
+      <p>
+        I built JobPilot to solve this for my own job search, then cleaned it up as a
+        public project once it was solid enough to be useful to others.
+      </p>
+
+      <h2 id="what-it-does">What it does</h2>
+      <ul>
+        <li><strong>Two-layer form filling.</strong> Simple text fields (name, email, phone, location) are filled instantly through local label-to-profile-key pattern matching — no network call, no latency, no cost. Everything else — selects, radio groups, free-text screening questions, custom dropdowns — goes to a single batched Claude API call that receives the full option list per field and picks the correct answer in context.</li>
+        <li><strong>Profile match scoring.</strong> Before applying, JobPilot scores your profile against the job description and shows what you match, what's missing but reasonable to claim, and what would misrepresent you. Gaps that keep recurring across many job descriptions get tallied over time (grouped by underlying concept, not exact wording, so "change management" and "managing organizational change" count as the same signal) — turning scattered rejections into a concrete list of skills worth actually adding to your resume.</li>
+        <li><strong>AI cover letters.</strong> Generates a tailored cover letter grounded in your profile and full resume detail, exportable as a PDF.</li>
+        <li><strong>Resume-driven setup.</strong> A first-run wizard takes a PDF/DOCX/TXT resume and uses Claude to extract your profile automatically — name, contact info, work history, a written summary, and skills — instead of a blank form. The same rebuild is available later from Settings whenever you update your resume.</li>
+        <li><strong>Duplicate-application tracking.</strong> JobPilot fingerprints each job posting (via embedded JSON-LD JobPosting metadata when present, otherwise page title/heading heuristics, falling back to a hash of the URL) and warns you before you re-apply to a posting — or a similar role at the same company — you've already marked as applied.</li>
+      </ul>
+
+      <h2 id="engineering">Engineering highlights</h2>
+
+      <h3>Filling framework-controlled inputs</h3>
+      <p>
+        Setting <code>.value</code> directly on a React- or Angular-controlled input does
+        nothing useful — the framework's internal state never sees the change, and the
+        form re-renders the old value. JobPilot uses the native
+        <code>HTMLInputElement</code> property setter (bypassing the framework's overridden
+        setter) and dispatches <code>input</code>/<code>change</code>/<code>blur</code>
+        events afterward, which is what actually gets picked up by React, Vue, and
+        Angular's own change-detection.
+      </p>
+
+      <h3>Reverse-engineering custom comboboxes</h3>
+      <p>
+        Many ATS platforms (react-select, MUI Autocomplete, and various
+        Greenhouse/Ashby-style widgets) render what looks like a plain text input but is
+        actually a JS-driven dropdown with a portaled options list — sometimes attached to
+        <code>&lt;body&gt;</code>, not nested near the input. Typing into these and reading
+        <code>.value</code> back doesn't register a selection with the framework; only
+        clicking the rendered option element does. JobPilot detects these via ARIA
+        attributes (<code>role="combobox"</code>, <code>aria-autocomplete</code>,
+        <code>aria-haspopup="listbox"</code>), types the target value character-by-character
+        to trigger the framework's own filtering, polls for the rendered option list with
+        tolerance for debounced/async filtering, and simulates a full pointer event
+        sequence (<code>pointerdown</code> → <code>mousedown</code> → <code>pointerup</code>
+        → <code>mouseup</code> → <code>click</code>) on the matched option — since several
+        of these libraries bind their selection handlers to pointer events rather than
+        <code>click</code> alone.
+      </p>
+
+      <h3>Dependency-free file handling under a strict CSP</h3>
+      <p>
+        Manifest V3 extension pages run under <code>script-src 'self'</code>, which rules
+        out loading a PDF or DOCX library from a CDN. Both had to be built from scratch: a
+        PDF generator that hand-writes valid PDF 1.4 object/xref structure and does its own
+        word-wrap using canvas font metrics (no library, no font embedding — just the
+        standard Helvetica base-14 font every PDF viewer ships), and a DOCX reader that
+        walks a <code>.docx</code>'s ZIP central directory by hand, decompresses
+        <code>word/document.xml</code> using the browser's built-in
+        <code>DecompressionStream</code>, and strips it down to plain text.
+      </p>
+
+      <h3>Knowing where it stops working</h3>
+      <p>
+        Some modern ATS platforms (ADP's Angular-based application flow among them) render
+        their entire form inside Shadow DOM via a component library, which a content
+        script's <code>document.querySelectorAll</code> fundamentally cannot see into —
+        shadow trees are separate node trees from the main document. Rather than silently
+        failing, this is a documented, understood limitation with a clear reason, not an
+        unexplained gap.
+      </p>
+
+      <h2 id="privacy">Privacy by design</h2>
+      <p>
+        Profile data and the Anthropic API key live only in
+        <code>chrome.storage.local</code> — never synced, never sent anywhere except the
+        user's own calls to the Anthropic API. LLM requests include only field
+        labels/options and a compact version of the profile; the API key itself never
+        appears in a prompt.
+      </p>
+
+      <h2 id="tech-stack">Tech stack</h2>
+      <ul>
+        <li><strong>Vanilla JavaScript</strong></li>
+        <li><strong>Manifest V3</strong> — service worker background script, on-demand content script injection, side panel UI</li>
+        <li><strong>Chrome Extension APIs</strong> — <code>scripting</code>, <code>storage</code>, <code>sidePanel</code>, <code>activeTab</code></li>
+        <li><strong>Anthropic Claude API</strong></li>
+      </ul>
+      <p>
+        No build step, no frameworks, no external runtime dependencies — a deliberate
+        constraint that shaped several of the harder engineering problems above.
+      </p>
+
+    </article>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="container">
+    <p>&copy; 2026 Saurabh Sharma · <a href="mailto:sbhsharma011@gmail.com">sbhsharma011@gmail.com</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
