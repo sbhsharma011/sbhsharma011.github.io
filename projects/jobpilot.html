@@ -77,52 +77,39 @@
 
       <h3>Filling framework-controlled inputs</h3>
       <p>
-        Setting <code>.value</code> directly on a React- or Angular-controlled input does
-        nothing useful — the framework's internal state never sees the change, and the
-        form re-renders the old value. JobPilot uses the native
-        <code>HTMLInputElement</code> property setter (bypassing the framework's overridden
-        setter) and dispatches <code>input</code>/<code>change</code>/<code>blur</code>
-        events afterward, which is what actually gets picked up by React, Vue, and
-        Angular's own change-detection.
+        Modern web frameworks like React and Angular keep their own internal copy of form
+        state — writing a value straight into the visible field doesn't reach that internal
+        state, so the framework quietly reverts it. JobPilot writes through the framework's
+        own change-detection instead of around it, so a filled field registers as a real
+        edit rather than getting silently overwritten a moment later.
       </p>
 
       <h3>Reverse-engineering custom comboboxes</h3>
       <p>
-        Many ATS platforms (react-select, MUI Autocomplete, and various
-        Greenhouse/Ashby-style widgets) render what looks like a plain text input but is
-        actually a JS-driven dropdown with a portaled options list — sometimes attached to
-        <code>&lt;body&gt;</code>, not nested near the input. Typing into these and reading
-        <code>.value</code> back doesn't register a selection with the framework; only
-        clicking the rendered option element does. JobPilot detects these via ARIA
-        attributes (<code>role="combobox"</code>, <code>aria-autocomplete</code>,
-        <code>aria-haspopup="listbox"</code>), types the target value character-by-character
-        to trigger the framework's own filtering, polls for the rendered option list with
-        tolerance for debounced/async filtering, and simulates a full pointer event
-        sequence (<code>pointerdown</code> → <code>mousedown</code> → <code>pointerup</code>
-        → <code>mouseup</code> → <code>click</code>) on the matched option — since several
-        of these libraries bind their selection handlers to pointer events rather than
-        <code>click</code> alone.
+        A lot of ATS platforms don't use native dropdowns — they render a JS-driven widget
+        that only looks like a plain text field, sometimes with its option list detached
+        from the input entirely in the page's structure. Typing a value into these doesn't
+        count as a selection; only interacting with them the way a real person would —
+        typing to trigger the widget's own filtering, then selecting from the list it
+        renders — works reliably across the different libraries these platforms are built
+        on.
       </p>
 
       <h3>Dependency-free file handling under a strict CSP</h3>
       <p>
-        Manifest V3 extension pages run under <code>script-src 'self'</code>, which rules
-        out loading a PDF or DOCX library from a CDN. Both had to be built from scratch: a
-        PDF generator that hand-writes valid PDF 1.4 object/xref structure and does its own
-        word-wrap using canvas font metrics (no library, no font embedding — just the
-        standard Helvetica base-14 font every PDF viewer ships), and a DOCX reader that
-        walks a <code>.docx</code>'s ZIP central directory by hand, decompresses
-        <code>word/document.xml</code> using the browser's built-in
-        <code>DecompressionStream</code>, and strips it down to plain text.
+        Chrome extensions run under a strict security policy that blocks loading outside
+        libraries at runtime, which ruled out the usual off-the-shelf tools for reading and
+        writing PDF and DOCX files. Both had to be built from first principles — a
+        lightweight PDF writer and a DOCX reader — rather than pulling in a dependency the
+        extension isn't allowed to load.
       </p>
 
       <h3>Knowing where it stops working</h3>
       <p>
-        Some modern ATS platforms (ADP's Angular-based application flow among them) render
-        their entire form inside Shadow DOM via a component library, which a content
-        script's <code>document.querySelectorAll</code> fundamentally cannot see into —
-        shadow trees are separate node trees from the main document. Rather than silently
-        failing, this is a documented, understood limitation with a clear reason, not an
+        A few modern ATS platforms render their entire application form inside an isolated
+        part of the page that a browser extension's content script fundamentally can't
+        reach into, no matter how it searches the page. Rather than fail silently there,
+        that's a documented, understood limitation with a clear technical reason — not an
         unexplained gap.
       </p>
 
